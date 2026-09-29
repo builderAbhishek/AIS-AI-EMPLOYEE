@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - AIS AI Employee</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <div class="sidebar" id="sidebar"></div>
+    <div class="main-content">
+        <div class="header">
+            <div class="page-title">Dashboard</div>
+            <div>Demo Mode Active</div>
+        </div>
+        <div class="container" id="app-content">
+            
+            <div class="grid-4" id="stats-grid">Loading...</div>
+            <div class="card">
+                <h3>Top Actions</h3>
+                <ul id="top-actions" style="margin-top:1rem; padding-left:1.5rem;"></ul>
+            </div>
+            <div class="card">
+                <h3>AI Daily Brief</h3>
+                <button class="btn btn-primary" onclick="generateBrief()">Generate Brief</button>
+                <div id="brief-content" style="margin-top: 1rem; white-space: pre-wrap;"></div>
+            </div>
+        
+        </div>
+    </div>
+    <script src="assets/js/app.js"></script>
+    
+        <script>
+            async function loadDashboard() {
+                const data = await apiCall('/dashboard/');
+                if(!data) return;
+                
+                document.getElementById('stats-grid').innerHTML = `
+                    <div class="card"><div>Total Leads</div><div class="stat-value">${data.overview.total_leads}</div></div>
+                    <div class="card"><div>Active Clients</div><div class="stat-value">${data.overview.active_clients}</div></div>
+                    <div class="card"><div>Active Projects</div><div class="stat-value">${data.overview.active_projects}</div></div>
+                    <div class="card"><div>Pending Tasks</div><div class="stat-value">${data.overview.pending_tasks}</div></div>
+                `;
+                
+                document.getElementById('top-actions').innerHTML = data.top_actions.map(a => 
+                    `<li><b>[${a.priority}]</b> ${a.title}</li>`
+                ).join('');
+            }
+            
+            async function generateBrief() {
+                document.getElementById('brief-content').innerText = "Analyzing data...";
+                const res = await apiCall('/ai/daily-brief');
+                document.getElementById('brief-content').innerText = res.text;
+            }
+            
+            loadDashboard();
+        </script>
+        
+</body>
+</html>

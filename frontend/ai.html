@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Employee - AIS AI Employee</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <div class="sidebar" id="sidebar"></div>
+    <div class="main-content">
+        <div class="header">
+            <div class="page-title">AI Employee</div>
+            <div>Demo Mode Active</div>
+        </div>
+        <div class="container" id="app-content">
+            
+            <div class="chat-container">
+                <div class="chat-box">
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="message ai">Hello! I am your AI Employee. How can I help AIS today?</div>
+                    </div>
+                    <div class="chat-input">
+                        <input type="text" id="chatInput" placeholder="Ask for next actions, pitch generation, etc..." onkeypress="if(event.key==='Enter') sendMessage()">
+                        <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+                    </div>
+                </div>
+                <div class="ai-sidebar card">
+                    <h3>Suggested Prompts</h3>
+                    <button class="btn" style="text-align:left" onclick="sendPrompt('आज क्या करना चाहिए?')">आज क्या करना चाहिए?</button>
+                    <button class="btn" style="text-align:left" onclick="sendPrompt('Pending tasks बताओ')">Pending tasks बताओ</button>
+                    <button class="btn" style="text-align:left" onclick="sendPrompt('Give me a sales pitch for a Restaurant')">Sales pitch for Restaurant</button>
+                </div>
+            </div>
+        
+        </div>
+    </div>
+    <script src="assets/js/app.js"></script>
+    
+        <script>
+            function sendPrompt(text) {
+                document.getElementById('chatInput').value = text;
+                sendMessage();
+            }
+
+            async function sendMessage() {
+                const input = document.getElementById('chatInput');
+                const text = input.value.trim();
+                if(!text) return;
+                
+                const chatMessages = document.getElementById('chat-messages');
+                chatMessages.innerHTML += `<div class="message user">${text}</div>`;
+                input.value = '';
+                
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                
+                const res = await apiCall('/ai/chat', 'POST', {message: text});
+                
+                chatMessages.innerHTML += `<div class="message ai">${res.text.replace(/\n/g, '<br>')}</div>`;
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        </script>
+        
+</body>
+</html>

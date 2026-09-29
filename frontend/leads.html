@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leads - AIS AI Employee</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <div class="sidebar" id="sidebar"></div>
+    <div class="main-content">
+        <div class="header">
+            <div class="page-title">Leads</div>
+            <div>Demo Mode Active</div>
+        </div>
+        <div class="container" id="app-content">
+            
+            <button class="btn btn-primary" onclick="openModal('leadModal')">+ New Lead</button>
+            <div class="card" style="margin-top: 1rem; overflow-x: auto;">
+                <table>
+                    <thead><tr><th>Name</th><th>Contact</th><th>Phone</th><th>Status</th><th>Priority</th><th>Actions</th></tr></thead>
+                    <tbody id="leads-table"></tbody>
+                </table>
+            </div>
+
+            <div class="modal" id="leadModal">
+                <div class="modal-content">
+                    <div class="modal-header"><h3>Add Lead</h3><button class="btn" onclick="closeModal('leadModal')">X</button></div>
+                    <form id="leadForm" onsubmit="saveLead(event)">
+                        <input type="text" id="business_name" placeholder="Business Name" required>
+                        <input type="text" id="contact_person" placeholder="Contact Person">
+                        <input type="text" id="phone" placeholder="Phone">
+                        <input type="email" id="email" placeholder="Email">
+                        <select id="status">
+                            <option value="NEW">NEW</option>
+                            <option value="CONTACTED">CONTACTED</option>
+                            <option value="INTERESTED">INTERESTED</option>
+                            <option value="MEETING">MEETING</option>
+                            <option value="PROPOSAL">PROPOSAL</option>
+                        </select>
+                        <select id="priority">
+                            <option value="LOW">LOW</option>
+                            <option value="MEDIUM" selected>MEDIUM</option>
+                            <option value="HIGH">HIGH</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary">Save Lead</button>
+                    </form>
+                </div>
+            </div>
+        
+        </div>
+    </div>
+    <script src="assets/js/app.js"></script>
+    
+        <script>
+            async function loadLeads() {
+                const leads = await apiCall('/leads/');
+                const tbody = document.getElementById('leads-table');
+                tbody.innerHTML = leads.map(l => `
+                    <tr>
+                        <td>${l.business_name}</td>
+                        <td>${l.contact_person || '-'}</td>
+                        <td>${l.phone || '-'}</td>
+                        <td><span class="badge badge-new">${l.status}</span></td>
+                        <td>${l.priority}</td>
+                        <td>
+                            <button class="btn btn-sm" onclick="pitchLead('${l.business_name}')">AI Pitch</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            async function saveLead(e) {
+                e.preventDefault();
+                const data = {
+                    business_name: document.getElementById('business_name').value,
+                    contact_person: document.getElementById('contact_person').value,
+                    phone: document.getElementById('phone').value,
+                    email: document.getElementById('email').value,
+                    status: document.getElementById('status').value,
+                    priority: document.getElementById('priority').value
+                };
+                await apiCall('/leads/', 'POST', data);
+                closeModal('leadModal');
+                loadLeads();
+            }
+
+            async function pitchLead(name) {
+                alert("Generating AI Pitch...");
+                const res = await apiCall('/ai/pitch', 'POST', {business_name: name, service_interest: "Software solutions"});
+                alert(res.text);
+            }
+            
+            loadLeads();
+        </script>
+        
+</body>
+</html>
