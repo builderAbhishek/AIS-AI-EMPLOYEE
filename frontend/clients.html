@@ -11,13 +11,83 @@
     <div class="main-content">
         <div class="header">
             <div class="page-title">Clients</div>
-            <div>Demo Mode Active</div>
+            <div id="mode-indicator" style="font-weight: bold;">Loading...</div>
         </div>
         <div class="container" id="app-content">
-            <div class='card'><h2>Clients Module</h2><p>CRUD operations work exactly like Leads.</p></div>
+            <button class="btn btn-primary" onclick="openModal('clientModal')">+ New Client</button>
+            <div class="card" style="margin-top: 1rem; overflow-x: auto;">
+                <table>
+                    <thead><tr><th>Business Name</th><th>Contact</th><th>Phone</th><th>Services</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody id="clients-table"></tbody>
+                </table>
+            </div>
+
+            <div class="modal" id="clientModal">
+                <div class="modal-content">
+                    <div class="modal-header"><h3>Add Client</h3><button class="btn" onclick="closeModal('clientModal')">X</button></div>
+                    <form id="clientForm" onsubmit="saveClient(event)">
+                        <input type="text" id="business_name" placeholder="Business Name" required>
+                        <input type="text" id="contact_person" placeholder="Contact Person">
+                        <input type="text" id="phone" placeholder="Phone">
+                        <input type="email" id="email" placeholder="Email">
+                        <input type="text" id="services" placeholder="Services (e.g. Website, CRM)">
+                        <select id="status">
+                            <option value="ACTIVE" selected>ACTIVE</option>
+                            <option value="ON_HOLD">ON_HOLD</option>
+                            <option value="COMPLETED">COMPLETED</option>
+                            <option value="INACTIVE">INACTIVE</option>
+                        </select>
+                        <textarea id="notes" placeholder="Client Notes..." rows="3"></textarea>
+                        <button type="submit" class="btn btn-primary">Save Client</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
     <script src="assets/js/app.js"></script>
-    
+    <script>
+        async function loadClients() {
+            const clients = await apiCall('/clients/');
+            const tbody = document.getElementById('clients-table');
+            tbody.innerHTML = clients.map(c => `
+                <tr>
+                    <td>${c.business_name}</td>
+                    <td>${c.contact_person || '-'}</td>
+                    <td>${c.phone || '-'}</td>
+                    <td>${c.services || '-'}</td>
+                    <td><span class="badge ${c.status === 'ACTIVE' ? 'badge-active' : 'badge-new'}">${c.status}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" onclick="deleteClient(${c.id})">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function saveClient(e) {
+            e.preventDefault();
+            const data = {
+                business_name: document.getElementById('business_name').value,
+                contact_person: document.getElementById('contact_person').value,
+                phone: document.getElementById('phone').value,
+                email: document.getElementById('email').value,
+                services: document.getElementById('services').value,
+                status: document.getElementById('status').value,
+                notes: document.getElementById('notes').value
+            };
+            await apiCall('/clients/', 'POST', data);
+            closeModal('clientModal');
+            document.getElementById('clientForm').reset();
+            loadClients();
+        }
+
+        async function deleteClient(id) {
+            if(confirm('Delete client?')) {
+                await apiCall(`/clients/${id}`, 'DELETE');
+                loadClients();
+            }
+        }
+        
+        loadClients();
+    </script>
 </body>
 </html>

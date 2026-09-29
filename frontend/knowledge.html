@@ -10,14 +10,81 @@
     <div class="sidebar" id="sidebar"></div>
     <div class="main-content">
         <div class="header">
-            <div class="page-title">Knowledge</div>
-            <div>Demo Mode Active</div>
+            <div class="page-title">Knowledge Base</div>
+            <div id="mode-indicator" style="font-weight: bold;">Loading...</div>
         </div>
         <div class="container" id="app-content">
-            <div class='card'><h2>Knowledge Module</h2><p>CRUD operations work exactly like Leads.</p></div>
+            <button class="btn btn-primary" onclick="openModal('knowledgeModal')">+ Add Knowledge</button>
+            <div class="card" style="margin-top: 1rem; overflow-x: auto;">
+                <table>
+                    <thead><tr><th>Title</th><th>Category</th><th>Tags</th><th>Actions</th></tr></thead>
+                    <tbody id="knowledge-table"></tbody>
+                </table>
+            </div>
+
+            <div class="modal" id="knowledgeModal">
+                <div class="modal-content">
+                    <div class="modal-header"><h3>Add Knowledge</h3><button class="btn" onclick="closeModal('knowledgeModal')">X</button></div>
+                    <form id="knowledgeForm" onsubmit="saveKnowledge(event)">
+                        <input type="text" id="title" placeholder="Title" required>
+                        <select id="category">
+                            <option value="COMPANY">COMPANY</option>
+                            <option value="SALES">SALES</option>
+                            <option value="MARKETING">MARKETING</option>
+                            <option value="OPERATIONS">OPERATIONS</option>
+                            <option value="DECISIONS">DECISIONS</option>
+                            <option value="CLIENT">CLIENT</option>
+                            <option value="PROJECT">PROJECT</option>
+                        </select>
+                        <input type="text" id="tags" placeholder="Tags (comma separated)">
+                        <textarea id="content" placeholder="Content..." rows="6" required></textarea>
+                        <button type="submit" class="btn btn-primary">Save Knowledge</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
     <script src="assets/js/app.js"></script>
-    
+    <script>
+        async function loadKnowledge() {
+            const kb = await apiCall('/knowledge/');
+            const tbody = document.getElementById('knowledge-table');
+            
+            tbody.innerHTML = kb.map(k => `
+                <tr>
+                    <td>${k.title}</td>
+                    <td><span class="badge badge-new">${k.category}</span></td>
+                    <td>${k.tags || '-'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" onclick="deleteKnowledge(${k.id})">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function saveKnowledge(e) {
+            e.preventDefault();
+            const data = {
+                title: document.getElementById('title').value,
+                category: document.getElementById('category').value,
+                tags: document.getElementById('tags').value,
+                content: document.getElementById('content').value,
+            };
+
+            await apiCall('/knowledge/', 'POST', data);
+            closeModal('knowledgeModal');
+            document.getElementById('knowledgeForm').reset();
+            loadKnowledge();
+        }
+
+        async function deleteKnowledge(id) {
+            if(confirm('Delete knowledge entry?')) {
+                await apiCall(`/knowledge/${id}`, 'DELETE');
+                loadKnowledge();
+            }
+        }
+        
+        loadKnowledge();
+    </script>
 </body>
 </html>

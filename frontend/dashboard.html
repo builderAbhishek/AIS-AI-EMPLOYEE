@@ -11,7 +11,7 @@
     <div class="main-content">
         <div class="header">
             <div class="page-title">Dashboard</div>
-            <div>Demo Mode Active</div>
+            <div id="mode-indicator" style="font-weight: bold;">Loading...</div>
         </div>
         <div class="container" id="app-content">
             
@@ -37,9 +37,12 @@
                 
                 document.getElementById('stats-grid').innerHTML = `
                     <div class="card"><div>Total Leads</div><div class="stat-value">${data.overview.total_leads}</div></div>
+                    <div class="card"><div>New Leads</div><div class="stat-value">${data.overview.new_leads}</div></div>
+                    <div class="card"><div>Qualified Leads</div><div class="stat-value">${data.overview.qualified_leads}</div></div>
                     <div class="card"><div>Active Clients</div><div class="stat-value">${data.overview.active_clients}</div></div>
                     <div class="card"><div>Active Projects</div><div class="stat-value">${data.overview.active_projects}</div></div>
                     <div class="card"><div>Pending Tasks</div><div class="stat-value">${data.overview.pending_tasks}</div></div>
+                    <div class="card"><div>Overdue Tasks</div><div class="stat-value" style="color:var(--danger)">${data.overview.overdue_tasks}</div></div>
                 `;
                 
                 document.getElementById('top-actions').innerHTML = data.top_actions.map(a => 

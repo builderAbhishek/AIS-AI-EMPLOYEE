@@ -8,12 +8,13 @@ A complete, local-first business operating system designed for Alag Innovative S
 - **Clients & Projects**: Track active clients and project progress.
 - **Tasks**: Priority management and deadline tracking.
 - **AI Employee**: Integrated AI assistant that can analyze priorities, generate pitches, and break down tasks.
-- **Demo Mode**: Fully functional AI mock mode when API keys are not provided.
+- **Real Gemini Integration**: Connects dynamically to Google's Gemini REST API with actual database context injection.
+- **Demo Mode**: Fully functional AI mock mode for offline testing.
 
 ## Tech Stack
-- **Backend**: Python 3.11+, FastAPI, SQLite, SQLAlchemy, Pydantic
+- **Backend**: Python 3.11+, FastAPI, SQLite, SQLAlchemy, Pydantic, Requests
 - **Frontend**: HTML5, CSS3, Vanilla JS
-- **AI**: Abstracted AIProvider (Default: OpenAI compatible or Demo mode)
+- **AI**: Abstracted AIProvider (Gemini REST API / Demo Mode)
 
 ## Installation & Setup
 
@@ -29,7 +30,7 @@ A complete, local-first business operating system designed for Alag Innovative S
    pip install -r requirements.txt
    ```
 5. **Configure Environment Variables**:
-   Copy `.env.example` to `.env` and fill in your API key if you have one.
+   Copy `.env.example` to `.env`. (The `.env` file is excluded from Git for security).
    ```bat
    copy .env.example .env
    ```
@@ -38,20 +39,21 @@ A complete, local-first business operating system designed for Alag Innovative S
    ```bat
    run.bat
    ```
-   Or run manually:
-   ```bat
-   uvicorn backend.app.main:app --reload --port 8000
-   ```
 7. **Open Browser**: Navigate to `http://localhost:8000/`
 
-## First Run Experience
-On the first run, the SQLite database is automatically initialized, tables are created, and realistic local business demo data (Leads, Clients, Tasks, Projects) is seeded into the database.
+## AI Configuration (Demo Mode vs Gemini Mode)
 
-## AI Configuration (Demo Mode vs API Mode)
-By default, the application runs in `AI_PROVIDER=demo` mode (set in `.env`). This provides realistic, deterministic AI responses so you can test the entire workflow without spending money on API calls.
+By default, the application runs in `AI_PROVIDER=demo` mode. 
 
-To use real AI:
-1. Open `.env`
-2. Set `AI_PROVIDER=api`
-3. Provide an `API_KEY` (e.g., from OpenAI).
-4. Restart the server.
+To use real Google Gemini AI:
+1. Obtain an API key from Google AI Studio.
+2. Open the application in your browser and go to **Settings**.
+3. Change **AI Provider** to `Gemini API`.
+4. Paste your **Gemini API Key**.
+5. Click **Save Configuration**.
+6. Click **Test Connection** to verify the key works. 
+
+*Security Warning:* The Gemini API key is stored purely on the backend database/environment and is never transmitted to the browser's frontend JavaScript.
+
+## Modifying AIS AI Rules
+Edit the `knowledge/company/ais_brain.md` file. The backend automatically injects this context (along with live leads, tasks, projects) directly into Gemini's system prompt before generating responses.

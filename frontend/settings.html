@@ -5,19 +5,150 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Settings - AIS AI Employee</title>
     <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .settings-container { max-width: 800px; }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 0.5rem; }
+        .form-control { width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 0.375rem; }
+        .status-panel { padding: 1rem; border-radius: 0.5rem; background: var(--surface); border: 1px solid var(--border); margin-bottom: 2rem; }
+        .status-panel p { margin-bottom: 0.5rem; }
+        .btn-test { background: #475569; color: white; margin-left: 0.5rem; }
+        .alert { padding: 1rem; border-radius: 0.375rem; margin-top: 1rem; display: none; }
+        .alert-success { background: #dcfce3; border: 1px solid #166534; color: #166534; }
+        .alert-error { background: #fee2e2; border: 1px solid #991b1b; color: #991b1b; }
+    </style>
 </head>
 <body>
     <div class="sidebar" id="sidebar"></div>
     <div class="main-content">
         <div class="header">
             <div class="page-title">Settings</div>
-            <div>Demo Mode Active</div>
+            <div id="mode-indicator">Loading...</div>
         </div>
-        <div class="container" id="app-content">
-            <div class='card'><h2>Settings Module</h2><p>CRUD operations work exactly like Leads.</p></div>
+        <div class="container settings-container" id="app-content">
+            
+            <div class="status-panel">
+                <h3>SYSTEM STATUS</h3>
+                <hr style="margin: 0.5rem 0; border: none; border-top: 1px solid var(--border);">
+                <p><strong>AI Provider:</strong> <span id="status-provider">...</span></p>
+                <p><strong>Connection:</strong> <span id="status-connection">Unknown</span></p>
+                <p><strong>Model:</strong> <span id="status-model">...</span></p>
+                <p><strong>Last Test:</strong> <span id="status-time">Never</span></p>
+            </div>
+
+            <div class="card">
+                <h3>AI CONFIGURATION</h3>
+                <hr style="margin: 1rem 0; border: none; border-top: 1px solid var(--border);">
+                <form id="settingsForm" onsubmit="saveSettings(event)">
+                    <div class="form-group">
+                        <label>AI Provider</label>
+                        <select id="AI_PROVIDER" class="form-control" onchange="toggleFields()">
+                            <option value="demo">Demo Mode</option>
+                            <option value="gemini">Gemini API</option>
+                        </select>
+                    </div>
+
+                    <div id="gemini-fields">
+                        <div class="form-group">
+                            <label>Model</label>
+                            <input type="text" id="GEMINI_MODEL" class="form-control" placeholder="e.g. gemini-3.8-flash">
+                        </div>
+                        <div class="form-group">
+                            <label>Gemini API Key</label>
+                            <input type="password" id="GEMINI_API_KEY" class="form-control" placeholder="Leave blank to keep existing key">
+                            <small style="color: var(--text-muted)">Securely stored on server. Key is never exposed.</small>
+                        </div>
+                        <div class="form-group">
+                            <label>API Base URL</label>
+                            <input type="text" id="GEMINI_API_BASE_URL" class="form-control" placeholder="https://generativelanguage.googleapis.com/v1beta">
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 2rem;">
+                        <button type="submit" class="btn btn-primary">Save Configuration</button>
+                        <button type="button" class="btn btn-test" onclick="testConnection()">Test Connection</button>
+                    </div>
+
+                    <div id="test-alert" class="alert"></div>
+                </form>
+            </div>
+
         </div>
     </div>
     <script src="assets/js/app.js"></script>
-    
+    <script>
+        function toggleFields() {
+            const provider = document.getElementById('AI_PROVIDER').value;
+            const fields = document.getElementById('gemini-fields');
+            fields.style.display = provider === 'gemini' ? 'block' : 'none';
+        }
+
+        async function loadSettings() {
+            const settings = await apiCall('/settings/');
+            if(!settings) return;
+            
+            document.getElementById('AI_PROVIDER').value = settings.AI_PROVIDER || 'demo';
+            document.getElementById('GEMINI_MODEL').value = settings.GEMINI_MODEL || 'gemini-3.8-flash';
+            document.getElementById('GEMINI_API_BASE_URL').value = settings.GEMINI_API_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta';
+            
+            const keyInput = document.getElementById('GEMINI_API_KEY');
+            if(settings.GEMINI_API_KEY_MASKED === 'Configured') {
+                keyInput.placeholder = 'Configured (type to override)';
+            }
+            
+            document.getElementById('status-provider').innerText = (settings.AI_PROVIDER || 'demo').toUpperCase();
+            document.getElementById('status-model').innerText = settings.GEMINI_MODEL || '-';
+            
+            document.getElementById('mode-indicator').innerText = settings.AI_PROVIDER === 'gemini' ? 'Gemini Mode Active' : 'Demo Mode Active';
+            
+            toggleFields();
+        }
+
+        async function saveSettings(e) {
+            e.preventDefault();
+            
+            const payload = {
+                settings: [
+                    {key: 'AI_PROVIDER', value: document.getElementById('AI_PROVIDER').value},
+                    {key: 'GEMINI_MODEL', value: document.getElementById('GEMINI_MODEL').value},
+                    {key: 'GEMINI_API_BASE_URL', value: document.getElementById('GEMINI_API_BASE_URL').value}
+                ]
+            };
+
+            const keyVal = document.getElementById('GEMINI_API_KEY').value;
+            if (keyVal) {
+                payload.settings.push({key: 'GEMINI_API_KEY', value: keyVal});
+            }
+
+            await apiCall('/settings/', 'POST', payload);
+            alert('Settings saved securely.');
+            loadSettings();
+        }
+
+        async function testConnection() {
+            const alertBox = document.getElementById('test-alert');
+            alertBox.style.display = 'block';
+            alertBox.className = 'alert';
+            alertBox.innerText = 'Testing connection...';
+            
+            const res = await apiCall('/ai/test-connection', 'POST');
+            
+            if(res.success) {
+                alertBox.className = 'alert alert-success';
+                alertBox.innerText = res.message;
+                document.getElementById('status-connection').innerText = 'Connected';
+                document.getElementById('status-connection').style.color = 'var(--success)';
+            } else {
+                alertBox.className = 'alert alert-error';
+                alertBox.innerText = res.message;
+                document.getElementById('status-connection').innerText = 'Failed';
+                document.getElementById('status-connection').style.color = 'var(--danger)';
+            }
+            
+            document.getElementById('status-time').innerText = new Date().toLocaleString();
+        }
+
+        document.addEventListener('DOMContentLoaded', loadSettings);
+    </script>
 </body>
 </html>

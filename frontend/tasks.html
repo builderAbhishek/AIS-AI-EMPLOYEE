@@ -5,19 +5,131 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tasks - AIS AI Employee</title>
     <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .overdue { color: var(--danger); font-weight: bold; }
+        .completed { text-decoration: line-through; color: var(--text-muted); }
+    </style>
 </head>
 <body>
     <div class="sidebar" id="sidebar"></div>
     <div class="main-content">
         <div class="header">
             <div class="page-title">Tasks</div>
-            <div>Demo Mode Active</div>
+            <div id="mode-indicator" style="font-weight: bold;">Loading...</div>
         </div>
         <div class="container" id="app-content">
-            <div class='card'><h2>Tasks Module</h2><p>CRUD operations work exactly like Leads.</p></div>
+            <button class="btn btn-primary" onclick="openModal('taskModal')">+ New Task</button>
+            <div class="card" style="margin-top: 1rem; overflow-x: auto;">
+                <table>
+                    <thead><tr><th>Task Title</th><th>Project</th><th>Status</th><th>Priority</th><th>Deadline</th><th>Actions</th></tr></thead>
+                    <tbody id="tasks-table"></tbody>
+                </table>
+            </div>
+
+            <div class="modal" id="taskModal">
+                <div class="modal-content">
+                    <div class="modal-header"><h3>Add Task</h3><button class="btn" onclick="closeModal('taskModal')">X</button></div>
+                    <form id="taskForm" onsubmit="saveTask(event)">
+                        <input type="text" id="title" placeholder="Task Title" required>
+                        <select id="project_id">
+                            <option value="">-- No Project --</option>
+                        </select>
+                        <select id="client_id">
+                            <option value="">-- No Client --</option>
+                        </select>
+                        <textarea id="description" placeholder="Task Description..." rows="3"></textarea>
+                        <select id="status">
+                            <option value="BACKLOG">BACKLOG</option>
+                            <option value="TODO" selected>TODO</option>
+                            <option value="IN_PROGRESS">IN_PROGRESS</option>
+                            <option value="REVIEW">REVIEW</option>
+                            <option value="DONE">DONE</option>
+                        </select>
+                        <select id="priority">
+                            <option value="LOW">LOW</option>
+                            <option value="MEDIUM" selected>MEDIUM</option>
+                            <option value="HIGH">HIGH</option>
+                            <option value="URGENT">URGENT</option>
+                        </select>
+                        <label>Deadline</label>
+                        <input type="datetime-local" id="deadline">
+                        <button type="submit" class="btn btn-primary">Save Task</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
     <script src="assets/js/app.js"></script>
-    
+    <script>
+        async function loadTasks() {
+            const tasks = await apiCall('/tasks/');
+            const tbody = document.getElementById('tasks-table');
+            const now = new Date();
+            
+            tbody.innerHTML = tasks.map(t => {
+                let dlStr = '-';
+                let isOverdue = false;
+                if (t.deadline) {
+                    const dl = new Date(t.deadline);
+                    dlStr = dl.toLocaleString();
+                    if (dl < now && t.status !== 'DONE') isOverdue = true;
+                }
+                
+                return `
+                <tr class="${t.status === 'DONE' ? 'completed' : ''}">
+                    <td>${t.title}</td>
+                    <td>${t.project_id || '-'}</td>
+                    <td><span class="badge ${t.status === 'DONE' ? 'badge-active' : 'badge-new'}">${t.status}</span></td>
+                    <td>${t.priority}</td>
+                    <td class="${isOverdue ? 'overdue' : ''}">${dlStr} ${isOverdue ? '(!)' : ''}</td>
+                    <td>
+                        ${t.status !== 'DONE' ? `<button class="btn btn-sm btn-primary" onclick="markDone(${t.id})">Complete</button>` : ''}
+                        <button class="btn btn-sm btn-danger" onclick="deleteTask(${t.id})">Del</button>
+                    </td>
+                </tr>
+            `}).join('');
+            
+            loadDropdown('/projects/', 'project_id', 'project_name', 'id');
+            loadDropdown('/clients/', 'client_id', 'business_name', 'id');
+        }
+
+        async function saveTask(e) {
+            e.preventDefault();
+            const data = {
+                title: document.getElementById('title').value,
+                project_id: document.getElementById('project_id').value ? parseInt(document.getElementById('project_id').value) : null,
+                client_id: document.getElementById('client_id').value ? parseInt(document.getElementById('client_id').value) : null,
+                description: document.getElementById('description').value,
+                status: document.getElementById('status').value,
+                priority: document.getElementById('priority').value,
+            };
+            const dl = document.getElementById('deadline').value;
+            if (dl) data.deadline = dl;
+
+            await apiCall('/tasks/', 'POST', data);
+            closeModal('taskModal');
+            document.getElementById('taskForm').reset();
+            loadTasks();
+        }
+
+        async function markDone(id) {
+            const tasks = await apiCall('/tasks/');
+            const task = tasks.find(t => t.id === id);
+            if(task) {
+                task.status = 'DONE';
+                await apiCall(`/tasks/${id}`, 'PUT', task);
+                loadTasks();
+            }
+        }
+
+        async function deleteTask(id) {
+            if(confirm('Delete task?')) {
+                await apiCall(`/tasks/${id}`, 'DELETE');
+                loadTasks();
+            }
+        }
+        
+        loadTasks();
+    </script>
 </body>
 </html>

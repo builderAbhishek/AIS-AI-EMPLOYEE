@@ -4,17 +4,67 @@ import json
 from .config import settings
 
 class AIProvider:
-    def __init__(self):
-        self.mode = "demo" if settings.AI_PROVIDER.lower() == "demo" or not settings.API_KEY else "api"
-        self.api_key = settings.API_KEY
-        self.base_url = settings.API_BASE_URL
-        self.model = settings.MODEL
+    def get_mode(self):
+        settings.reload()
+        return settings.AI_PROVIDER.lower()
 
-    def generate_response(self, prompt: str, system_prompt: str = "") -> dict:
-        if self.mode == "demo":
+    def generate_response(self, prompt: str, system_context: str = "") -> dict:
+        mode = self.get_mode()
+        if mode == "demo":
             return self._demo_response(prompt)
         
-        return self._api_response(prompt, system_prompt)
+        return self._gemini_response(prompt, system_context)
+
+    def test_connection(self) -> dict:
+        settings.reload()
+        if self.get_mode() == "demo":
+            return {
+                "success": True, 
+                "message": "Demo mode is active. No external connection needed.", 
+                "model": "demo"
+            }
+        
+        api_key = settings.GEMINI_API_KEY
+        if not api_key:
+            return {"success": False, "message": "Gemini API key is missing."}
+        
+        url = f"{settings.GEMINI_API_BASE_URL}/models/{settings.GEMINI_MODEL}:generateContent"
+        headers = {
+            "x-goog-api-key": api_key,
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "contents": [
+                {
+                    "parts": [{"text": "Reply with exactly: AIS Gemini connection successful"}]
+                }
+            ]
+        }
+        
+        try:
+            response = requests.post(url, headers=headers, json=payload, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+            
+            if "AIS Gemini connection successful" in text:
+                return {"success": True, "message": "Connection successful", "model": settings.GEMINI_MODEL}
+            
+            return {"success": False, "message": f"Unexpected response from Gemini: {text}"}
+        
+        except requests.exceptions.HTTPError as e:
+            code = e.response.status_code
+            msg = "HTTP Error."
+            if code == 401: msg = "Invalid API Key or unauthorized (401)."
+            elif code == 403: msg = "Permission denied (403)."
+            elif code == 429: msg = "Rate limit exceeded (429)."
+            elif code >= 500: msg = f"Gemini server error ({code})."
+            return {"success": False, "message": f"{msg} Details: {e.response.text}"}
+        except requests.exceptions.Timeout:
+            return {"success": False, "message": "Connection timed out."}
+        except Exception as e:
+            return {"success": False, "message": f"Connection failed: {str(e)}"}
 
     def _demo_response(self, prompt: str) -> dict:
         p = prompt.lower()
@@ -31,30 +81,49 @@ class AIProvider:
             }
         
         return {
-            "text": f"[DEMO MODE] This is a mock AI response for: '{prompt}'. Configure API key in settings to enable real AI.",
+            "text": f"[DEMO MODE] This is a mock AI response for: '{prompt}'. Switch AI Provider to Gemini in settings for real intelligence.",
             "actions": []
         }
 
-    def _api_response(self, prompt: str, system_prompt: str) -> dict:
+    def _gemini_response(self, prompt: str, system_context: str) -> dict:
+        settings.reload()
+        api_key = settings.GEMINI_API_KEY
+        if not api_key:
+            return {"text": "Error: Gemini API key is missing. Please configure it in settings.", "actions": []}
+
+        url = f"{settings.GEMINI_API_BASE_URL}/models/{settings.GEMINI_MODEL}:generateContent"
         headers = {
-            "Authorization": f"Bearer {self.api_key}",
+            "x-goog-api-key": api_key,
             "Content-Type": "application/json"
         }
         
+        full_prompt = f"SYSTEM CONTEXT:\n{system_context}\n\nUSER REQUEST:\n{prompt}"
+        
         payload = {
-            "model": self.model,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
-            ],
-            "temperature": 0.7
+            "contents": [
+                {
+                    "parts": [{"text": full_prompt}]
+                }
+            ]
         }
         
         try:
-            response = requests.post(f"{self.base_url}/chat/completions", headers=headers, json=payload, timeout=30)
+            response = requests.post(url, headers=headers, json=payload, timeout=30)
             response.raise_for_status()
             data = response.json()
-            text = data["choices"][0]["message"]["content"]
-            return {"text": text, "actions": []} # In a full implementation, we'd parse actions from structured output.
+            text = data["candidates"][0]["content"]["parts"][0]["text"]
+            return {"text": text, "actions": []}
+            
+        except requests.exceptions.HTTPError as e:
+            code = e.response.status_code
+            error_msg = f"API Error ({code})."
+            if code == 401: error_msg = "Gemini API key is invalid or expired."
+            elif code == 403: error_msg = "Permission denied to access Gemini API."
+            elif code == 429: error_msg = "Rate limit exceeded. Please try again later."
+            elif code >= 500: error_msg = "Gemini API server error. Please try again later."
+            return {"text": f"Error: {error_msg}", "actions": []}
+            
+        except requests.exceptions.Timeout:
+            return {"text": "Error: Gemini API request timed out.", "actions": []}
         except Exception as e:
-            return {"text": f"Error communicating with AI Provider: {str(e)}", "actions": []}
+            return {"text": f"Error communicating with Gemini Provider: {str(e)}", "actions": []}

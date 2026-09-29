@@ -11,13 +11,103 @@
     <div class="main-content">
         <div class="header">
             <div class="page-title">Projects</div>
-            <div>Demo Mode Active</div>
+            <div id="mode-indicator" style="font-weight: bold;">Loading...</div>
         </div>
         <div class="container" id="app-content">
-            <div class='card'><h2>Projects Module</h2><p>CRUD operations work exactly like Leads.</p></div>
+            <button class="btn btn-primary" onclick="openModal('projectModal')">+ New Project</button>
+            <div class="card" style="margin-top: 1rem; overflow-x: auto;">
+                <table>
+                    <thead><tr><th>Project Name</th><th>Client ID</th><th>Status</th><th>Progress</th><th>Priority</th><th>Actions</th></tr></thead>
+                    <tbody id="projects-table"></tbody>
+                </table>
+            </div>
+
+            <div class="modal" id="projectModal">
+                <div class="modal-content">
+                    <div class="modal-header"><h3>Add Project</h3><button class="btn" onclick="closeModal('projectModal')">X</button></div>
+                    <form id="projectForm" onsubmit="saveProject(event)">
+                        <input type="text" id="project_name" placeholder="Project Name" required>
+                        <select id="client_id">
+                            <option value="">-- Loading Clients --</option>
+                        </select>
+                        <textarea id="description" placeholder="Project Description..." rows="3"></textarea>
+                        <select id="status">
+                            <option value="PLANNING" selected>PLANNING</option>
+                            <option value="IN_PROGRESS">IN_PROGRESS</option>
+                            <option value="REVIEW">REVIEW</option>
+                            <option value="COMPLETED">COMPLETED</option>
+                            <option value="ON_HOLD">ON_HOLD</option>
+                        </select>
+                        <select id="priority">
+                            <option value="LOW">LOW</option>
+                            <option value="MEDIUM" selected>MEDIUM</option>
+                            <option value="HIGH">HIGH</option>
+                            <option value="URGENT">URGENT</option>
+                        </select>
+                        <label>Progress (%)</label>
+                        <input type="number" id="progress" min="0" max="100" value="0">
+                        <label>Deadline</label>
+                        <input type="datetime-local" id="deadline">
+                        <button type="submit" class="btn btn-primary">Save Project</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
     <script src="assets/js/app.js"></script>
-    
+    <script>
+        async function loadProjects() {
+            const projects = await apiCall('/projects/');
+            const tbody = document.getElementById('projects-table');
+            tbody.innerHTML = projects.map(p => `
+                <tr>
+                    <td>${p.project_name}</td>
+                    <td>${p.client_id || '-'}</td>
+                    <td><span class="badge ${p.status === 'COMPLETED' ? 'badge-active' : 'badge-new'}">${p.status}</span></td>
+                    <td>${p.progress}%</td>
+                    <td>${p.priority}</td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" onclick="deleteProject(${p.id})">Delete</button>
+                        <button class="btn btn-sm" onclick="breakdownProject('${p.project_name}', '${p.description || ''}')">AI Breakdown</button>
+                    </td>
+                </tr>
+            `).join('');
+            loadDropdown('/clients/', 'client_id', 'business_name', 'id');
+        }
+
+        async function saveProject(e) {
+            e.preventDefault();
+            const data = {
+                project_name: document.getElementById('project_name').value,
+                client_id: document.getElementById('client_id').value ? parseInt(document.getElementById('client_id').value) : null,
+                description: document.getElementById('description').value,
+                status: document.getElementById('status').value,
+                priority: document.getElementById('priority').value,
+                progress: parseInt(document.getElementById('progress').value),
+            };
+            const dl = document.getElementById('deadline').value;
+            if (dl) data.deadline = dl;
+
+            await apiCall('/projects/', 'POST', data);
+            closeModal('projectModal');
+            document.getElementById('projectForm').reset();
+            loadProjects();
+        }
+
+        async function deleteProject(id) {
+            if(confirm('Delete project?')) {
+                await apiCall(`/projects/${id}`, 'DELETE');
+                loadProjects();
+            }
+        }
+        
+        async function breakdownProject(name, desc) {
+            alert("Analyzing Project with AI...");
+            const res = await apiCall('/ai/task-breakdown', 'POST', {project_name: name, description: desc});
+            alert(res.text);
+        }
+
+        loadProjects();
+    </script>
 </body>
 </html>
