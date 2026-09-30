@@ -1,62 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Employee - AIS OS</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#2563eb',
-                        primaryHover: '#1d4ed8'
-                    }
-                }
-            }
-        }
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        /* Scrollbar styles */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        
-        /* Modal */
-        .modal { display: none; }
-        .modal.active { display: flex; }
-    </style>
-</head>
-<body class="bg-slate-50 text-slate-900 flex h-screen overflow-hidden">
+import os
+from build_ui import write_file, base_layout
 
-    <!-- Sidebar -->
-    <div id="sidebar" class="w-64 bg-white border-r border-slate-200 flex-col hidden md:flex shrink-0"></div>
-
-    <div class="flex-1 flex flex-col overflow-hidden relative">
-        <!-- Header -->
-        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-10 relative">
-            <div class="flex items-center gap-4">
-                <button class="md:hidden text-slate-500 hover:text-slate-700" onclick="document.getElementById('sidebar').classList.toggle('hidden'); document.getElementById('sidebar').classList.toggle('absolute'); document.getElementById('sidebar').classList.toggle('h-full'); document.getElementById('sidebar').classList.toggle('z-50');">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                </button>
-                <h1 class="text-xl font-semibold">AI Employee</h1>
-            </div>
-            <div class="flex items-center gap-4">
-                
-                <div id="mode-indicator" class="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 flex items-center gap-2">
-                    <div class="w-2 h-2 rounded-full bg-slate-400"></div> Loading...
-                </div>
-            </div>
-        </header>
-
-        <!-- Main Content -->
-        <main class="flex-1 overflow-y-auto p-4 md:p-8">
-            <div class="max-w-6xl mx-auto w-full">
-                
+html_content = """
 <div class="h-[calc(100vh-10rem)] flex bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
     
     <!-- Chat Sidebar -->
@@ -114,18 +59,9 @@
         </div>
     </div>
 </div>
+"""
 
-            </div>
-        </main>
-        
-        <!-- Toasts -->
-        <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
-    </div>
-
-    
-
-    <script src="assets/js/app.js?v=1790722172"></script>
-    
+scripts = """
 <script>
     let currentChatId = null;
     let allChats = [];
@@ -133,14 +69,14 @@
     function formatAIResponse(text) {
         if (!text) return '';
         let formatted = text
-            .replace(/\n/g, '\n')
+            .replace(/\\n/g, '\\n')
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/^\* (.+)$/gm, '<li>$1</li>')
-            .replace(/(<li>.*?<\/li>(?:\n)?)+/gs, match => `<ul class="list-disc pl-5 my-2 space-y-1">${match.replace(/\n/g, '')}</ul>`)
-            .replace(/\n/g, '<br>');
+            .replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>')
+            .replace(/^\\* (.+)$/gm, '<li>$1</li>')
+            .replace(/(<li>.*?<\\/li>(?:\\n)?)+/gs, match => `<ul class="list-disc pl-5 my-2 space-y-1">${match.replace(/\\n/g, '')}</ul>`)
+            .replace(/\\n/g, '<br>');
         return formatted;
     }
 
@@ -233,7 +169,7 @@
         if (role === 'user') {
             avatar = `<div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center shrink-0 text-white font-bold text-xs shadow-sm">You</div>`;
             bubbleClass = 'bg-primary text-white border-primary rounded-tr-none shadow-sm';
-            formattedContent = content.replace(/\n/g, '<br>');
+            formattedContent = content.replace(/\\n/g, '<br>');
         } else {
             avatar = `<div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 border border-indigo-200"><svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg></div>`;
             bubbleClass = 'bg-white border-slate-200 text-slate-700 rounded-tl-none shadow-sm';
@@ -331,8 +267,8 @@
             a.download = `chat_${currentChatId}.json`;
             a.click();
         } else {
-            let txt = `Chat: ${data.chat.title}\n\n`;
-            data.messages.forEach(m => txt += `[${m.role.toUpperCase()}] ${m.created_at}\n${m.content}\n\n`);
+            let txt = `Chat: ${data.chat.title}\\n\\n`;
+            data.messages.forEach(m => txt += `[${m.role.toUpperCase()}] ${m.created_at}\\n${m.content}\\n\\n`);
             const blob = new Blob([txt], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -342,8 +278,20 @@
         }
     }
 
-    loadChats();
+    document.addEventListener('DOMContentLoaded', () => {
+        loadChats();
+    });
 </script>
+"""
 
-</body>
-</html>
+final_html = base_layout.format(
+    title="AI Employee", 
+    page_title="AI Employee", 
+    header_extra="", 
+    content=html_content, 
+    scripts=scripts, 
+    modals=""
+)
+
+write_file("ai.html", final_html)
+print("AI Employee rebuilt.")

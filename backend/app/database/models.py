@@ -117,3 +117,22 @@ class Setting(Base):
     id = Column(Integer, primary_key=True, index=True)
     key = Column(String, unique=True, index=True)
     value = Column(String)
+
+class ChatConversation(Base):
+    __tablename__ = "chat_conversations"
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, default="New Chat")
+    current_plan = Column(Text, nullable=True)
+    is_archived = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(Integer, ForeignKey("chat_conversations.id"))
+    role = Column(String)
+    content = Column(Text)
+    metadata_json = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=func.now())
+

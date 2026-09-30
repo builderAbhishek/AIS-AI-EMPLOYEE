@@ -8,52 +8,49 @@ A complete, local-first business operating system designed for Alag Innovative S
 - **Clients & Projects**: Track active clients and project progress.
 - **Tasks**: Priority management and deadline tracking.
 - **AI Employee**: Integrated AI assistant that can analyze priorities, generate pitches, and break down tasks.
-- **Real Gemini Integration**: Connects dynamically to Google's Gemini REST API with actual database context injection.
-- **Demo Mode**: Fully functional AI mock mode for offline testing.
+- **Local AI Integration**: Connects dynamically to local Ollama API with actual database context injection.
+- **100% Private**: AIS business data is never sent to the cloud.
 
 ## Tech Stack
 - **Backend**: Python 3.11+, FastAPI, SQLite, SQLAlchemy, Pydantic, Requests
 - **Frontend**: HTML5, CSS3, Vanilla JS
-- **AI**: Abstracted AIProvider (Gemini REST API / Demo Mode)
+- **AI**: Abstracted AIProvider (Local Ollama)
 
 ## Installation & Setup
 
 1. **Install Python 3.11+** if not already installed.
-2. **Open Terminal** in the project directory.
-3. **Create Virtual Environment**:
+2. **Install Ollama** and pull models (e.g. `qwen3:4b` or `qwen2.5:0.5b`).
+3. **Open Terminal** in the project directory.
+4. **Create Virtual Environment**:
    ```bat
    python -m venv venv
    call venv\Scripts\activate
    ```
-4. **Install Requirements**:
+5. **Install Requirements**:
    ```bat
    pip install -r requirements.txt
    ```
-5. **Configure Environment Variables**:
-   Copy `.env.example` to `.env`. (The `.env` file is excluded from Git for security).
+6. **Configure Environment Variables**:
+   Copy `.env.example` to `.env`.
    ```bat
    copy .env.example .env
    ```
-6. **Run the Application**:
+7. **Run the Application**:
    Run the startup script:
    ```bat
    run.bat
    ```
-7. **Open Browser**: Navigate to `http://localhost:8000/`
+8. **Open Browser**: Navigate to `http://localhost:8000/`
 
-## AI Configuration (Demo Mode vs Gemini Mode)
+## AI Configuration (Ollama Setup)
 
-By default, the application runs in `AI_PROVIDER=demo` mode. 
+The application uses `AI_PROVIDER=ollama`.
 
-To use real Google Gemini AI:
-1. Obtain an API key from Google AI Studio.
+1. Start your local Ollama server (defaults to `http://127.0.0.1:11434`).
 2. Open the application in your browser and go to **Settings**.
-3. Change **AI Provider** to `Gemini API`.
-4. Paste your **Gemini API Key**.
-5. Click **Save Configuration**.
-6. Click **Test Connection** to verify the key works. 
-
-*Security Warning:* The Gemini API key is stored purely on the backend database/environment and is never transmitted to the browser's frontend JavaScript.
+3. Select your installed **Ollama Model** (e.g., `qwen3:4b`).
+4. Click **Save AI Settings**.
+5. Click **Test Connection** to verify Ollama is responding.
 
 ## Modifying AIS AI Rules
-Edit the `knowledge/company/ais_brain.md` file. The backend automatically injects this context (along with live leads, tasks, projects) directly into Gemini's system prompt before generating responses.
+Edit the `knowledge/company/ais_brain.md` file. The backend automatically injects this context (along with live leads, tasks, projects) directly into Ollama's system prompt before generating responses.

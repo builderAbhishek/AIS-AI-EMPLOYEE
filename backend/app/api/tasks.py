@@ -13,6 +13,31 @@ router = APIRouter()
 def get_tasks(db: Session = Depends(get_db)):
     return db.query(models.Task).order_by(models.Task.id.desc()).all()
 
+@router.get("/{task_id}")
+def get_task(task_id: int, db: Session = Depends(get_db)):
+    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not task:
+        return {"found": False, "message": f"Task #{task_id} was not found in the current database."}
+    
+    project_name = None
+    if task.project_id:
+        project = db.query(models.Project).filter(models.Project.id == task.project_id).first()
+        if project:
+            project_name = project.project_name
+
+    return {
+        "found": True,
+        "id": task.id,
+        "title": task.title,
+        "project_id": task.project_id,
+        "project_name": project_name,
+        "priority": task.priority,
+        "status": task.status,
+        "due_date": str(task.deadline) if task.deadline else "Not set",
+        "created_at": str(task.created_at) if task.created_at else "Not set",
+        "description": task.description
+    }
+
 @router.post("/", response_model=schemas.TaskResponse)
 def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db)):
     db_task = models.Task(**task.dict())

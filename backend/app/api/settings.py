@@ -23,27 +23,18 @@ def get_settings(db: Session = Depends(get_db)):
     # Defaults if missing in DB
     result = {
         "AI_PROVIDER": setting_dict.get("AI_PROVIDER", settings.AI_PROVIDER),
-        "GEMINI_MODEL": setting_dict.get("GEMINI_MODEL", settings.GEMINI_MODEL),
-        "GEMINI_API_BASE_URL": setting_dict.get("GEMINI_API_BASE_URL", settings.GEMINI_API_BASE_URL),
+        "OLLAMA_MODEL": setting_dict.get("OLLAMA_MODEL", getattr(settings, "OLLAMA_MODEL", "")),
+        "OLLAMA_BASE_URL": setting_dict.get("OLLAMA_BASE_URL", getattr(settings, "OLLAMA_BASE_URL", "http://127.0.0.1:11434")),
+        "OLLAMA_THINKING_MODE": setting_dict.get("OLLAMA_THINKING_MODE", getattr(settings, "OLLAMA_THINKING_MODE", "false")),
         "COMPANY_NAME": setting_dict.get("COMPANY_NAME", settings.COMPANY_NAME),
         "FOUNDER_NAME": setting_dict.get("FOUNDER_NAME", settings.FOUNDER_NAME),
     }
-    
-    api_key = setting_dict.get("GEMINI_API_KEY", settings.GEMINI_API_KEY)
-    if api_key:
-        result["GEMINI_API_KEY_MASKED"] = "Configured" 
-    else:
-        result["GEMINI_API_KEY_MASKED"] = ""
         
     return result
 
 @router.post("/")
 def update_settings(updates: SettingsUpdate, db: Session = Depends(get_db)):
     for item in updates.settings:
-        # Ignore masked key submissions
-        if item.key == "GEMINI_API_KEY" and item.value == "Configured":
-            continue
-            
         db_setting = db.query(models.Setting).filter(models.Setting.key == item.key).first()
         if db_setting:
             db_setting.value = item.value

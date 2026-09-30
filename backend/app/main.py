@@ -6,7 +6,7 @@ import os
 
 from .database.database import SessionLocal
 from .database.seed import seed_db
-from .api import leads, clients, projects, tasks, dashboard, ai, knowledge, activities, settings
+from .api import leads, clients, projects, tasks, dashboard, ai, knowledge, activities, settings, chats
 
 # Initialize Database with seed data
 db = SessionLocal()
@@ -33,6 +33,7 @@ app.include_router(knowledge.router, prefix="/api/knowledge", tags=["knowledge"]
 app.include_router(activities.router, prefix="/api/activities", tags=["activities"])
 app.include_router(ai.router, prefix="/api/ai", tags=["ai"])
 app.include_router(settings.router, prefix="/api/settings", tags=["settings"])
+app.include_router(chats.router, prefix="/api/chats", tags=["chats"])
 
 # Mount Frontend (if frontend folder exists)
 frontend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "frontend")

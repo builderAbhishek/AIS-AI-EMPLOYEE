@@ -1,62 +1,131 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Settings - AIS OS</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#2563eb',
-                        primaryHover: '#1d4ed8'
-                    }
-                }
-            }
-        }
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        /* Scrollbar styles */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        
-        /* Modal */
-        .modal { display: none; }
-        .modal.active { display: flex; }
-    </style>
-</head>
-<body class="bg-slate-50 text-slate-900 flex h-screen overflow-hidden">
+import os
+from build_ui import write_file, base_layout
 
-    <!-- Sidebar -->
-    <div id="sidebar" class="w-64 bg-white border-r border-slate-200 flex-col hidden md:flex shrink-0"></div>
+# --- KNOWLEDGE BASE ---
+knowledge_html = """
+<div class="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+    <div class="relative w-full md:w-96">
+        <svg class="w-5 h-5 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <input type="text" id="searchInput" placeholder="Search knowledge base..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" oninput="loadKnowledge()">
+    </div>
+    <button onclick="openModal('addKnowledgeModal')" class="w-full md:w-auto bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-primaryHover transition-colors flex items-center justify-center gap-2 shadow-sm">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        New Document
+    </button>
+</div>
 
-    <div class="flex-1 flex flex-col overflow-hidden relative">
-        <!-- Header -->
-        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-10 relative">
-            <div class="flex items-center gap-4">
-                <button class="md:hidden text-slate-500 hover:text-slate-700" onclick="document.getElementById('sidebar').classList.toggle('hidden'); document.getElementById('sidebar').classList.toggle('absolute'); document.getElementById('sidebar').classList.toggle('h-full'); document.getElementById('sidebar').classList.toggle('z-50');">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                </button>
-                <h1 class="text-xl font-semibold">System Settings</h1>
-            </div>
-            <div class="flex items-center gap-4">
-                
-                <div id="mode-indicator" class="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 flex items-center gap-2">
-                    <div class="w-2 h-2 rounded-full bg-slate-400"></div> Loading...
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="knowledge-grid">
+    <div class="col-span-full text-center text-slate-500 py-8">Loading knowledge base...</div>
+</div>
+"""
+
+knowledge_modals = """
+<!-- Add Knowledge Modal -->
+<div id="addKnowledgeModal" class="modal fixed inset-0 bg-slate-900/50 z-50 justify-center items-center p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+            <h3 class="text-lg font-semibold text-slate-800">Add Knowledge Document</h3>
+            <button onclick="closeModal('addKnowledgeModal')" class="text-slate-400 hover:text-slate-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto">
+            <form id="addKnowledgeForm" onsubmit="addKnowledge(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Title</label>
+                    <input type="text" id="title" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
                 </div>
-            </div>
-        </header>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Category</label>
+                    <input type="text" id="category" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Content</label>
+                    <textarea id="content" rows="6" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono text-sm"></textarea>
+                </div>
+                <div class="pt-4 border-t border-slate-200 flex justify-end gap-3">
+                    <button type="button" onclick="closeModal('addKnowledgeModal')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primaryHover transition-colors shadow-sm">Save Document</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+"""
 
-        <!-- Main Content -->
-        <main class="flex-1 overflow-y-auto p-4 md:p-8">
-            <div class="max-w-6xl mx-auto w-full">
-                
+knowledge_scripts = """
+<script>
+    async function loadKnowledge() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        try {
+            const data = await apiCall('/knowledge/');
+            const grid = document.getElementById('knowledge-grid');
+            grid.innerHTML = '';
+            
+            const filtered = data.filter(k => k.title.toLowerCase().includes(query) || (k.category && k.category.toLowerCase().includes(query)));
+            
+            if (filtered.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center text-slate-500 py-8 bg-white border border-slate-200 rounded-xl border-dashed">No documents found.</div>';
+                return;
+            }
+
+            filtered.forEach(k => {
+                grid.innerHTML += `
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col h-64">
+                        <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-start gap-2">
+                            <div>
+                                <h3 class="font-semibold text-slate-800 line-clamp-1" title="${k.title}">${k.title}</h3>
+                                <span class="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full mt-1 inline-block">${k.category || 'General'}</span>
+                            </div>
+                            <button onclick="deleteKnowledge(${k.id})" class="text-slate-400 hover:text-red-600 shrink-0" title="Delete">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                        <div class="p-5 flex-1 overflow-y-auto text-sm text-slate-600 font-mono whitespace-pre-wrap text-xs">
+                            ${k.content}
+                        </div>
+                    </div>
+                `;
+            });
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function addKnowledge(e) {
+        e.preventDefault();
+        const payload = {
+            title: document.getElementById('title').value,
+            category: document.getElementById('category').value,
+            content: document.getElementById('content').value
+        };
+        await apiCall('/knowledge/', 'POST', payload);
+        closeModal('addKnowledgeModal');
+        document.getElementById('addKnowledgeForm').reset();
+        showToast('Document saved');
+        loadKnowledge();
+    }
+
+    async function deleteKnowledge(id) {
+        confirmAction("Delete this document?", async () => {
+            await apiCall(`/knowledge/${id}`, 'DELETE');
+            showToast('Document deleted');
+            loadKnowledge();
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', loadKnowledge);
+</script>
+"""
+
+write_file("knowledge.html", base_layout.format(
+    title="Knowledge Base", page_title="Knowledge Base", header_extra="", 
+    content=knowledge_html, scripts=knowledge_scripts, modals=knowledge_modals
+))
+
+
+# --- SETTINGS ---
+settings_html = """
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
     <!-- Connection Status -->
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -134,18 +203,9 @@
         </div>
     </div>
 </div>
+"""
 
-            </div>
-        </main>
-        
-        <!-- Toasts -->
-        <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
-    </div>
-
-    
-
-    <script src="assets/js/app.js?v=1790722172"></script>
-    
+settings_scripts = """
 <script>
     let loadedOllamaModel = "";
     
@@ -251,8 +311,13 @@
         checkHealth();
     }
 
-    loadSettings();
+    document.addEventListener('DOMContentLoaded', loadSettings);
 </script>
+"""
 
-</body>
-</html>
+write_file("settings.html", base_layout.format(
+    title="Settings", page_title="System Settings", header_extra="", 
+    content=settings_html, scripts=settings_scripts, modals=""
+))
+
+print("Knowledge and Settings rebuilt.")
